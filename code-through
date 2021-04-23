@@ -1,0 +1,406 @@
+---
+title: "CPP 529 Code-through"
+author: "April Peck"
+date: "04/20/2021"
+output:
+  rmarkdown::html_document:
+    theme: cerulean
+
+---
+```{r setup, include = FALSE, warning = FALSE}
+library( "visNetwork" )
+
+```
+
+# visNetwork: R package for network visualization
+
+
+visNetwork is a data package for visualizing networks. It could be used for things like family trees, brainstorming charts, track professional ballplayers' movement between teams, household movement between neighborhoods, tracking criminals, facebook networking (think friend suggestions...you should friend Mary because you have 5 friends that are friends with her), employee/supervisor relationships - pretty much any kind of networking you can think of! For this example, I will be using my family to show the links between generations.
+
+***
+
+### Install and load packages  
+
+To begin, you will need to install and load the package "visNetwork". 
+```{r, warning = FALSE}
+
+install.packages( "visNetwork" )
+library( "visNetwork" )
+
+```
+***
+
+### Create or load the data
+
+In the real world, you would most likely be loading data already compiled - from a database, csv file, etc. For this example, I created the data based on my mother's family, starting with her mother.
+
+Two dataframes are required to create a visNetwork: one with nodes and one with edges. You can think of nodes as the data identifiers: who or what are we networking? Edges identifies the relationship between the nodes.
+
+In my case "nodes" is family members, so I listed all my family members. The only data required in the nodes dataframe is an ID, which must be unique to each row. I could have used names as the id, but that would cause a problem if there were duplicate names (technically there are, but I reframed some of the names like "Steven" and "Stevie"), so I chose numbers for the ID and then labeled them with the names. In the real world you could use identifying numbers such as social security numbers or employee id's. The label is what shows on the plot, so it is useful to include.
+```{r}
+nodes <- data.frame(id = 1:21,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April",
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy",
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava"))
+```
+
+ My dataframe now looks like this:
+```{r, echo=FALSE}
+nodes
+```
+
+The second required dataframe is the edges. This is where we identify the relationship or connections between the nodes. Because the nodes uses numbers for the id, we have to use numbers for the edges. Each row gives the relationship between two nodes. Each node can have multiple relationships. For this example, I created a row from each person to each of their children. Admittedly, it can be hard to read! I used an Excel spreadsheet with names to figure it out.
+"From" and "To" are the only columns required in the edges dataframe. You can add additional columns, and I will demonstrate the usefulness of doing so later in this demonstration.
+```{r}
+edges <- data.frame(from = c('1',	'1',	'1',	'1',	'1',	'2',	'2',	'3',	'4',	'4',	'4',	
+                             '5','6',	'6',	'9',	'9',	'9',	'13',	'13',	'13'),
+                    to =  c('2',	'3',	'4',	'5',	'6',	'7',	'8',	'9',	'10',	'11',	'12',	
+                            '13', '14',	'15',	'16',	'17',	'18',	'19',	'20',	'21'))
+
+```
+
+My dataframe now looks like this:
+```{r echo=FALSE}
+edges
+```
+
+***
+
+### Create your visNetwork plot (and make it pretty)
+
+Now that we have all the required information, we can create a basic visNetwork plot.
+
+```{r, echo=TRUE}
+family.tree <- visNetwork(nodes, edges)
+family.tree
+
+```
+
+This plot has the basic information we need, but it's kind of hard to make any sense out of it. We can fix that by adding groupings to the data; visNetwork will then put each grouping in a different color. Let's group by generation by adding them to the nodes dataframe. Since my dataframe is in order by generation, I can do it using the rep() function.
+
+```{r}
+nodes <- data.frame(id = 1:21,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6)))
+
+nodes
+```
+
+Now the plot will be easier to read:
+
+```{r, echo=TRUE}
+family.tree <- visNetwork(nodes, edges)
+family.tree
+
+```
+
+That's much better, but we can make it even better by adding custom colors and shapes to each group. We do this with a function called visGroups, part of the visNetwork package and used when we create the plot.
+
+```{r, echo=TRUE}
+family.tree <- visNetwork(nodes, edges) %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+
+```
+
+
+We can also add information in the edges dataframe such as labels for the lines between the groupings, indicating which direction the arrow should go, the type of line, add shadows...there are lots of visual options we can add. For now, let's add some additional labels and directional arrows.
+
+In this case, since all the arrows will be pointing to the child, we will indicate they should all be "to". You can add the direction to each row, however, and the options are "to", "from" (pointing to the person in the "from" column), "middle" (puts an arrow in the middle of the line), or any combination of the three ("to","from"; "middle","from"; etc.)
+
+
+```{r, echo=TRUE}
+edges <- data.frame(from = c('1',	'1',	'1',	'1',	'1',	'2',	'2',	'3',	'4',	'4',	'4',	
+                             '5', '6',	'6',	'9',	'9',	'9',	'13',	'13',	'13'),
+                    to =  c('2',	'3',	'4',	'5',	'6',	'7',	'8',	'9',	'10',	'11',	'12',	
+                            '13', '14',	'15',	'16',	'17',	'18',	'19',	'20',	'21'),
+                    label = c("Child 1",	"Child 2",	"Child 3",	"Child 4",	"Child 5",	
+                              "Child 1",	"Child 2",	"Child 1",	"Child 1",	"Child 2",	
+                              "Child 3",	"Child 1",	"Child 1",	"Child 2",	"Child 3",	
+                              "Child 2",	"Child 1",	"Child 1",	"Child 2",	"Child 3"),
+                    arrows = "to")
+
+edges
+
+family.tree <- visNetwork(nodes, edges) %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+```
+
+***
+
+### Keep adding to your network
+
+This is a nice, tidy visual of my family tree, but what if I wanted to add to it? Let's say I wanted to add my dad's family. His family is pretty small; let's add his mom, brother, and him in the nodes datarame and attach him to my mom, me, and my sister in the edges dataframe.
+
+```{r}
+nodes <- data.frame(id = 1:24,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava", "Nadine", "John",
+                             "Rick"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6), "Matriarch", "Parent", "Parent"))
+
+edges <- data.frame(from = c('1',	'1',	'1',	'1',	'1',	'2',	'2',	'3',	'4',	'4',	'4',	
+                             '5', '6',	'6',	'9',	'9',	'9',	'13',	'13',	'13', "22", "22", 
+                             "2", "7", "8"),
+                    to =  c('2',	'3',	'4',	'5',	'6',	'7',	'8',	'9',	'10',	'11',	'12',	
+                            '13', '14',	'15',	'16',	'17',	'18',	'19',	'20',	'21', "23", "24", 
+                            "23", "23", "23"),
+                    label = c("Child 1",	"Child 2",	"Child 3",	"Child 4",	"Child 5",	
+                              "Child 1",	"Child 2",	"Child 1",	"Child 1",	"Child 2",	
+                              "Child 3",	"Child 1",	"Child 1",	"Child 2",	"Child 3",	
+                              "Child 2",	"Child 1",	"Child 1",	"Child 2",	"Child 3", 
+                              "Child 1", "Child 2", "Spouse 1", "Child 1", "Child 2"),
+                    arrows = c(rep("to", 22), "Both", rep("from", 2)))
+
+
+nodes
+edges
+```
+
+Now let's take a look at the plot:
+```{r}
+family.tree <- visNetwork(nodes, edges) %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+```
+
+As you can see, we now have a new branch on the plot that shows both my parents, and that both me and my sister belong to both of them. What about a blended family? Let's use my aunt Pam as an example. Both her boys have different fathers, and she is not married to either of them. However, her current husband has two boys.
+
+```{r}
+nodes <- data.frame(id = 1:29,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava", "Nadine", "John",
+                             "Rick", "Bill", "Patrick", "Dale", "Joe", "Brad"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6), "Matriarch", rep("Parent",5), 
+                             rep("Child",2)))
+
+edges <- data.frame(from = c('1',	'1',	'1',	'1',	'1',	'2',	'2',	'3',	'4',	'4',	'4',	
+                             '5', '6',	'6',	'9',	'9',	'9',	'13',	'13',	'13', "22", "22", 
+                             "2", "7", "8", "6", "6", "6", "25", "26", "27", "27"),
+                    to =  c('2',	'3',	'4',	'5',	'6',	'7',	'8',	'9',	'10',	'11',	'12',	
+                            '13', '14',	'15',	'16',	'17',	'18',	'19',	'20',	'21', "23", "24", 
+                            "23", "23", "23", "25", "26", "27", "15", "14", "28", "29"),
+                    label = c("Child 1",	"Child 2",	"Child 3",	"Child 4",	"Child 5",	
+                              "Child 1",	"Child 2",	"Child 1",	"Child 1",	"Child 2",	
+                              "Child 3",	"Child 1",	"Child 1",	"Child 2",	"Child 3",	
+                              "Child 2",	"Child 1",	"Child 1",	"Child 2",	"Child 3", 
+                              "Child 1", "Child 2", "Spouse 1", "Child 1", "Child 2", "Spouse 2", 
+                              "Spouse 1", "Spouse 3", "Child 1", "Child 1", "Child 1", "Child 2"),
+                    arrows = c(rep("to", 22), "both", rep("from", 2), rep("both", 3), 
+                               rep("to", 4)))
+
+
+nodes
+edges
+
+
+family.tree <- visNetwork(nodes, edges, width = "100%") %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+```
+
+How coool is that? You can clearly see which parents had which child and which are step-children. I'm having so much fun with this, let's add one more layer: my spouse and his family.
+
+```{r}
+nodes <- data.frame(id = 1:36,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava", "Nadine", "John",
+                             "Rick", "Bill", "Patrick", "Dale", "Joe", "Brad", "Betty", "Mark", 
+                             "Cindy", "Emily", "Jean", "Cody", "Ivy"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6), "Matriarch", rep("Parent",5), 
+                             rep("Child",2), "Matriarch", "Parent", "Parent", "Child", "Parent", 
+                             "Child", "Grandchild"))
+
+edges <- data.frame(from = c('1',	'1',	'1',	'1',	'1',	'2',	'2',	'3',	'4',	'4',	'4',	
+                             '5', '6',	'6',	'9',	'9',	'9',	'13',	'13',	'13', "22", "22", 
+                             "2", "7", "8", "6", "6", "6", "25", "26", "27", "27", "8", "31", 
+                             "32", "31", "31", "34", "33", "33", "35"),
+                    to =  c('2',	'3',	'4',	'5',	'6',	'7',	'8',	'9',	'10',	'11',	'12',	
+                            '13', '14',	'15',	'16',	'17',	'18',	'19',	'20',	'21', "23", "24", 
+                            "23", "23", "23", "25", "26", "27", "15", "14", "28", "29", "31", 
+                            "30", "30", "34", "33", "33", "35", "36", "36"),
+                    label = c("Child 1",	"Child 2",	"Child 3",	"Child 4",	"Child 5",	
+                              "Child 1",	"Child 2",	"Child 1",	"Child 1",	"Child 2",	
+                              "Child 3",	"Child 1",	"Child 1",	"Child 2",	"Child 3",	
+                              "Child 2",	"Child 1",	"Child 1",	"Child 2",	"Child 3", 
+                              "Child 1", "Child 2", "Spouse 1", "Child 1", "Child 2", "Spouse 2", 
+                              "Spouse 1", "Spouse 3", "Child 1", "Child 1", "Child 1", "Child 2", 
+                              "Spouse 2", "Child 1", "Child 2", "Spouse 1", "Child 1", "Child 1", 
+                              "Spouse 1", "Child 1", "Child 1"),
+                    arrows = c(rep("to", 22), "both", rep("from", 2), rep("both", 3), 
+                               rep("to", 4), "both", "from", "from", "both", "to", "to", "both", 
+                               "to", "to"))
+
+
+nodes
+edges
+
+
+family.tree <- visNetwork(nodes, edges, width = "100%") %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+```
+As you can see, you could just keep going and going with this. but let's move on.
+
+***
+
+### Interactive plot
+
+Did you notice the plot is interactive? You can move it around, zoom in and out, and even move people around. That is all great, but the information is pretty limited. How old are these people? Where were they born? Are they still alive?
+
+We can click on a particular person to highlight them on the plot, but we can also add popup labels (tooltips) for when you click on them. We do this by creating a "title" column in the node dataframe.
+
+First, let's add the data we want to include.
+```{r, echo=TRUE}
+
+nodes <- data.frame(id = 1:36,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava", "Nadine", "John",
+                             "Rick", "Bill", "Patrick", "Dale", "Joe", "Brad", "Betty", "Mark", 
+                             "Cindy", "Emily", "Jean", "Cody", "Ivy"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6), "Matriarch", rep("Parent",5), 
+                             rep("Child",2), "Matriarch", "Parent", "Parent", "Child", "Parent", 
+                             "Child", "Grandchild"),
+                   DOB = c('01/01/1934',	'01/01/1950',	'01/01/1951',	'01/01/1952',	'01/01/1953',	
+                           '01/01/1954',	'01/01/1970',	'01/01/1971',	'01/01/1972',	'01/01/1973',	
+                           '01/01/1974',	'01/01/1975',	'01/01/1976',	'01/01/1977',	'01/01/1978',	
+                           '01/01/2002',	'01/01/2001',	'01/01/2000',	'01/01/2003',	'01/01/2004',	
+                           '01/01/2005',	'01/01/1928',	'01/01/1950',	'01/01/1951',	'01/01/1960',	
+                           '01/01/1961',	'01/01/1962',	'01/01/1979',	'01/01/1980',	'01/01/1930',	
+                           '01/01/1958',	'01/01/1960',	'01/01/1993',	'01/01/1956',	'01/01/1990',	
+                           '01/01/2021'),
+                   POB = c('OK',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	
+                           'CA', 'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'TN',	'CO',	
+                           'CO',	'CA', 'NY',	'KY',	'WY',	'AZ',	'AZ',	'TX',	'AZ',	'AZ',	'AZ',	
+                           'AZ',	'SD',	 'NC'),
+                   DOD = c("01/01/2018",	"",	"01/01/2020",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "01/01/2015",	"",	"",	"",	""),
+                   POD = c("CA",	"",	"CA",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"AZ",	"",	"",
+                           "",	""))
+
+nodes
+```
+
+That looks good. Now let's string together the data we want in the tooltip and call it "title".
+```{r, echo=TRUE}
+
+nodes <- data.frame(id = 1:36,
+                   label = c("Pat", "Luella", "Ray", "Steven", "David", "Pam", "Julie", "April", 
+                             "Kenneth", "Stevie", "Amanda", "Matthew", "Sherry", "Brian", "Billy", 
+                             "Luke", "Braden", "Maddie", "Flora", "Aiden", "Ava", "Nadine", "John",
+                             "Rick", "Bill", "Patrick", "Dale", "Joe", "Brad", "Betty", "Mark", 
+                             "Cindy", "Emily", "Jean", "Cody", "Ivy"),
+                   group = c(rep("Matriarch", 1), rep("Parent",5),
+                             rep("Child",9), rep("Grandchild",6), "Matriarch", rep("Parent",5), 
+                             rep("Child",2), "Matriarch", "Parent", "Parent", "Child", "Parent", 
+                             "Child", "Grandchild"),
+                   DOB = c('01/01/1934',	'01/01/1950',	'01/01/1951',	'01/01/1952',	'01/01/1953',	
+                           '01/01/1954',	'01/01/1970',	'01/01/1971',	'01/01/1972',	'01/01/1973',	
+                           '01/01/1974',	'01/01/1975',	'01/01/1976',	'01/01/1977',	'01/01/1978',	
+                           '01/01/2002',	'01/01/2001',	'01/01/2000',	'01/01/2003',	'01/01/2004',	
+                           '01/01/2005',	'01/01/1928',	'01/01/1950',	'01/01/1951',	'01/01/1960',	
+                           '01/01/1961',	'01/01/1962',	'01/01/1979',	'01/01/1980',	'01/01/1930',	
+                           '01/01/1958',	'01/01/1960',	'01/01/1993',	'01/01/1956',	'01/01/1990',	
+                           '01/01/2021'),
+                   POB = c('OK',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	
+                           'CA', 'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'CA',	'TN',	'CO',	
+                           'CO',	'CA', 'NY',	'KY',	'WY',	'AZ',	'AZ',	'TX',	'AZ',	'AZ',	'AZ',	
+                           'AZ',	'SD',	 'NC'),
+                   DOD = c("01/01/2018",	"",	"01/01/2020",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "01/01/2015",	"",	"",	"",	""),
+                   POD = c("CA",	"",	"CA",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",
+                           "",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"",	"AZ",	"",	"",
+                           "",	""),
+                   title = paste0("<p>", nodes$label, "<br>Born: ", nodes$DOB, " in ", nodes$POB, 
+                                  "<br>Died: ", nodes$DOD, " in ", nodes$POD, "</p"))
+
+nodes
+```
+
+Now to recreate the plot with the new nodes table, and we should be able to click on any person to see their birth and death information.
+```{r}
+family.tree <- visNetwork(nodes, edges, width = "100%") %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle")
+
+family.tree
+
+```
+
+
+***
+
+### Add legends
+
+One last thing to make the plot more readable: a legend. What do the colors/shapes represent? This is a very simple addition using visLegend()
+
+```{r, echo=TRUE}
+
+family.tree <- visNetwork(nodes, edges, width = "100%") %>%
+  visGroups(groupname = "Matriarch", color = "deeppink", shape = "heart")%>%
+  visGroups(groupname = "Parent", color = "purple", shape = "diamond")%>%
+  visGroups(groupname = "Child", color = "darkcyan", shape = "square")%>%
+  visGroups(groupname = "Grandchild", color = "orangered", shape = "triangle") %>%
+  visLegend()
+
+family.tree
+```
+
+***
+
+### Explore
+
+There is so much more you can do with visNetwork. You can use images in the shapes (e.g. a photo of the person). You can use fontAwesome icons. Change the layout. Lay it out in a particular shape with visIgraphLayout. Put it in a shiny app to make it even more interactive. Visualize classification and regression trees, and more! I highly encourage you to check out the additional resources below.  
+
+***
+
+### 3 a.m. thoughts
+
+I know a person that had so many children (14), one of them married Joe, another married Joe's neice Kim, and a third one married Kim's sister Alice. So is this a case of "my uncle is my brother" and I wonder what that would look like on visNetwork.
+
+Similarly, after my grandparents were married my grandma's uncle married my grandpa's mom, so my grandparents became cousins. I wonder what THAT would look like!
+
+***
+
+### Sources:
+[Introduction to visNetwork](https://cran.r-project.org/web/packages/visNetwork/vignettes/Introduction-to-visNetwork.html)  
+[visNetwork on datastorm](https://datastorm-open.github.io/visNetwork/tree.html)  
+[Interactive Network Visualization with R](https://www.statworx.com/ch/blog/interactive-network-visualization-with-r/)  
+[visNetwork package documentation](https://cran.r-project.org/web/packages/visNetwork/visNetwork.pdf)
